@@ -1,24 +1,26 @@
-import constants.EXTENSAO
-import helpers.getAbsolutePath
+import helpers.solvePath
+import helpers.validateFile
 import org.antlr.v4.runtime.*
-import org.gustavolyra.portugolpp.Interpretador
+import org.gustavolyra.portugolpp.Interpreter
 import org.gustavolyra.portugolpp.PortugolPPLexer
 import org.gustavolyra.portugolpp.PortugolPPParser
-import java.io.File
+import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.system.exitProcess
 
-var interpretador = Interpretador()
+var interpreter = Interpreter()
+val STATIC_PATH: Path = Path.of(System.getProperty("user.dir"))
+
 fun main() {
     println("Iniciando Portugol++")
     when {
-//       args.getOrNull(0) == "run" && args.size > 1 -> executarArquivo(args[1])
+//       args.getOrNull(0) == "run" && args.size > 1 -> execFile(args[1])
         //REPL direto...
-        else -> modoInterativo()
+        else -> interactiveMode()
     }
 }
 
-fun modoInterativo() {
+fun interactiveMode() {
     println("Digite 'exit' para sair")
     println("Digite 'run <caminho>' para executar um arquivo")
     while (true) {
@@ -28,29 +30,28 @@ fun modoInterativo() {
             input == "exit" -> exitProcess(0)
             input.startsWith("run ") -> {
                 val caminho = input.substring(4).trim()
-                executarArquivo(caminho)
+                val arquivo = solvePath(caminho)
+                execFile(arquivo)
             }
 
-            input == "reset" -> interpretador = Interpretador()
-            else -> executarPortugolPP(input)
+            input == "reset" -> interpreter = Interpreter()
+            else -> execEngine(input)
         }
     }
 }
 
-fun executarArquivo(caminho: String) {
+fun execFile(file: Path) {
     try {
-
-        val pathMain = getAbsolutePath(caminho)
-        if (!validarArquivo(pathMain.toFile())) return
-        val fileData = pathMain.readText()
-        executarPortugolPP(fileData)
+        if (!validateFile(file.toFile())) return
+        val fileData = file.readText()
+        execEngine(fileData)
     } catch (e: Exception) {
         println("Erro ao ler/executar o arquivo: ${e.message}")
     }
 }
 
 
-fun executarPortugolPP(codigo: String) {
+fun execEngine(codigo: String) {
     try {
         val input = CharStreams.fromString(codigo)
         val lexer = PortugolPPLexer(input)
@@ -75,21 +76,10 @@ fun executarPortugolPP(codigo: String) {
             println("ERRO: Analise sintatica falhou arvore sintática nula...!")
             return
         }
-        interpretador.interpretar(tree)
+        interpreter.interpretar(tree)
     } catch (e: Exception) {
         println("Erro ao executar o programa ${e.message}")
     }
 }
 
-fun validarArquivo(arquivo: File): Boolean {
-    if (!arquivo.exists()) {
-        println("Erro: Arquivo nao encontrado!")
-        return false
-    }
-    if (!arquivo.name.endsWith(EXTENSAO)) {
-        println("Formato do arquivo invalido! Use arquivos .pplus")
-        return false
-    }
-    return true
-}
 

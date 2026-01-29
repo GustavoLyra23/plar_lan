@@ -7,8 +7,8 @@ import kotlinx.coroutines.runBlocking
 import models.Ambiente
 import models.Valor
 import models.errors.ArquivoException
-import processors.FileIOProcessor.escreverArquivo
-import processors.FileIOProcessor.lerArquivo
+import processors.file_io_processor.escreverArquivo
+import processors.file_io_processor.lerArquivo
 import java.util.*
 
 fun setFuncoesDefault(global: Ambiente) {

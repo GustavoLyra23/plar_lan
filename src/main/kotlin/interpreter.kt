@@ -1,7 +1,7 @@
 package org.gustavolyra.portugolpp
 
 import ehPonto
-import helpers.getAbsolutePath
+import helpers.solvePath
 import models.Ambiente
 import models.Valor
 import models.enums.LOOP
@@ -14,19 +14,17 @@ import java.nio.file.Files
 
 
 @Suppress("REDUNDANT_OVERRIDE")
-class Interpretador : PortugolPPBaseVisitor<Valor>() {
-    /** Ambiente global que contém todas as definições de classes, interfaces e funções globais */
+class Interpreter : PortugolPPBaseVisitor<Valor>() {
     private var global = Ambiente()
 
-    /** Ambiente atual de execução, pode ser o global ou um escopo local */
+    // actual exec environment
     private var ambiente = global
 
-    /** Referência para a função atualmente em execução (usado para verificação de tipos de retorno) */
+    // ref to the function being executed
     private var funcaoAtual: Valor.Funcao? = null
 
     private val arquivosImportados = mutableSetOf<String>()
 
-    //setando funcoes nativas da linguagem...
     init {
         setFuncoesDefault(global)
     }
@@ -67,9 +65,8 @@ class Interpretador : PortugolPPBaseVisitor<Valor>() {
     fun processarImport(nomeArquivo: String) {
         if (arquivosImportados.contains(nomeArquivo)) return
         arquivosImportados.add(nomeArquivo)
-
         try {
-            val path = getAbsolutePath(nomeArquivo)
+            val path = solvePath(nomeArquivo)
             val conteudo = Files.readString(path)
             val lexer = PortugolPPLexer(CharStreams.fromString(conteudo))
             val tokens = CommonTokenStream(lexer)

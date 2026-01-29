@@ -1,6 +1,6 @@
 package processors
 
-object FileIOProcessor {
+object file_io_processor {
 
     fun lerArquivo(path: String): String {
         return try {
