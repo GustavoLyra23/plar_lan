@@ -1,16 +1,16 @@
 package processors
 
-object file_io_processor {
+object FileIOProcessor {
 
-    fun lerArquivo(path: String): String {
+    fun readFile(path: String): String {
         return try {
             java.io.File(path).readText()
         } catch (e: Exception) {
             throw RuntimeException("Erro ao ler o arquivo: $path", e)
         }
     }
-    
-    fun escreverArquivo(path: String, data: String, append: Boolean = false) {
+
+    fun writeFile(path: String, data: String, append: Boolean = false) {
         try {
             val file = java.io.File(path)
             if (append) {

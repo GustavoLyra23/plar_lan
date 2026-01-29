@@ -1,9 +1,9 @@
 package processors
 
-import models.Ambiente
+import models.Environment
 
 
-fun retornoFuncaoInvalido(retorno: String?, global: Ambiente): Boolean {
+fun isReturnInvalid(retorno: String?, global: Environment): Boolean {
     if (retorno == null) return false
     return retorno !in listOf(
         "Inteiro", "Real", "Texto", "Logico", "Nulo", "Lista", "Mapa"

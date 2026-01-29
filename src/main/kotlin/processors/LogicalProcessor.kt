@@ -1,10 +1,10 @@
 package processors
 
-import models.Valor
+import models.Value
 
-fun comparar(operador: String, esquerda: Valor, direita: Valor): Valor {
+fun compare(operador: String, esquerda: Value, direita: Value): Value {
     return when {
-        esquerda is Valor.Inteiro && direita is Valor.Inteiro -> Valor.Logico(
+        esquerda is Value.Integer && direita is Value.Integer -> Value.Logico(
             when (operador) {
                 "<" -> esquerda.valor < direita.valor
                 "<=" -> esquerda.valor <= direita.valor
@@ -14,7 +14,7 @@ fun comparar(operador: String, esquerda: Valor, direita: Valor): Valor {
             }
         )
 
-        esquerda is Valor.Real && direita is Valor.Real -> Valor.Logico(
+        esquerda is Value.Real && direita is Value.Real -> Value.Logico(
             when (operador) {
                 "<" -> esquerda.valor < direita.valor
                 "<=" -> esquerda.valor <= direita.valor
@@ -24,7 +24,7 @@ fun comparar(operador: String, esquerda: Valor, direita: Valor): Valor {
             }
         )
 
-        esquerda is Valor.Real && direita is Valor.Inteiro -> Valor.Logico(
+        esquerda is Value.Real && direita is Value.Integer -> Value.Logico(
             when (operador) {
                 "<" -> esquerda.valor < direita.valor.toDouble()
                 "<=" -> esquerda.valor <= direita.valor.toDouble()
@@ -34,7 +34,7 @@ fun comparar(operador: String, esquerda: Valor, direita: Valor): Valor {
             }
         )
 
-        esquerda is Valor.Inteiro && direita is Valor.Real -> Valor.Logico(
+        esquerda is Value.Integer && direita is Value.Real -> Value.Logico(
             when (operador) {
                 "<" -> esquerda.valor.toDouble() < direita.valor
                 "<=" -> esquerda.valor.toDouble() <= direita.valor
@@ -44,7 +44,7 @@ fun comparar(operador: String, esquerda: Valor, direita: Valor): Valor {
             }
         )
 
-        esquerda is Valor.Texto && direita is Valor.Texto -> Valor.Logico(
+        esquerda is Value.Text && direita is Value.Text -> Value.Logico(
             when (operador) {
                 "<" -> esquerda.valor < direita.valor
                 "<=" -> esquerda.valor <= direita.valor
@@ -58,17 +58,17 @@ fun comparar(operador: String, esquerda: Valor, direita: Valor): Valor {
     }
 }
 
-fun saoIguais(esquerda: Valor, direita: Valor): Boolean {
+fun areEqual(esquerda: Value, direita: Value): Boolean {
     return when {
-        esquerda is Valor.Inteiro && direita is Valor.Inteiro -> esquerda.valor == direita.valor
-        esquerda is Valor.Real && direita is Valor.Real -> esquerda.valor == direita.valor
-        esquerda is Valor.Real && direita is Valor.Inteiro -> esquerda.valor == direita.valor.toDouble()
-        esquerda is Valor.Inteiro && direita is Valor.Real -> esquerda.valor.toDouble() == direita.valor
-        esquerda is Valor.Texto && direita is Valor.Texto -> esquerda.valor == direita.valor
-        esquerda is Valor.Logico && direita is Valor.Logico -> esquerda.valor == direita.valor
-        esquerda is Valor.Objeto && direita is Valor.Objeto -> esquerda === direita
-        esquerda is Valor.Lista && direita is Valor.Lista -> esquerda === direita
-        esquerda is Valor.Mapa && direita is Valor.Mapa -> esquerda === direita
+        esquerda is Value.Integer && direita is Value.Integer -> esquerda.valor == direita.valor
+        esquerda is Value.Real && direita is Value.Real -> esquerda.valor == direita.valor
+        esquerda is Value.Real && direita is Value.Integer -> esquerda.valor == direita.valor.toDouble()
+        esquerda is Value.Integer && direita is Value.Real -> esquerda.valor.toDouble() == direita.valor
+        esquerda is Value.Text && direita is Value.Text -> esquerda.valor == direita.valor
+        esquerda is Value.Logico && direita is Value.Logico -> esquerda.valor == direita.valor
+        esquerda is Value.Object && direita is Value.Object -> esquerda === direita
+        esquerda is Value.List && direita is Value.List -> esquerda === direita
+        esquerda is Value.Map && direita is Value.Map -> esquerda === direita
         else -> false
     }
 }

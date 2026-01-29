@@ -3,22 +3,22 @@ package models
 import models.errors.MemoryError
 import org.gustavolyra.portugolpp.PortugolPPParser
 
-class Ambiente(val enclosing: Ambiente? = null) {
-    private val valores = mutableMapOf<String, Valor>()
+class Environment(val enclosing: Environment? = null) {
+    private val values = mutableMapOf<String, Value>()
 
     private val classes = mutableMapOf<String, PortugolPPParser.DeclaracaoClasseContext?>()
 
     private val interfaces = mutableMapOf<String, PortugolPPParser.DeclaracaoInterfaceContext>()
 
     //referente a instancia que estamos...
-    var thisObjeto: Valor.Objeto? = null
+    var thisObject: Value.Object? = null
 
-    fun definirInterface(nome: String, declaracao: PortugolPPParser.DeclaracaoInterfaceContext) {
+    fun setInterface(nome: String, declaracao: PortugolPPParser.DeclaracaoInterfaceContext) {
         interfaces[nome] = declaracao
     }
 
-    fun obterInterface(nome: String): PortugolPPParser.DeclaracaoInterfaceContext? {
-        return interfaces[nome] ?: enclosing?.obterInterface(nome)
+    fun getInterface(nome: String): PortugolPPParser.DeclaracaoInterfaceContext? {
+        return interfaces[nome] ?: enclosing?.getInterface(nome)
     }
 
     fun interfaceExists(nome: String): Boolean {
@@ -52,47 +52,47 @@ class Ambiente(val enclosing: Ambiente? = null) {
     }
 
 
-    fun definir(nome: String, valor: Valor) {
-        valores[nome] = valor
+    fun define(nome: String, value: Value) {
+        values[nome] = value
     }
 
-    fun obter(nome: String): Valor {
-        if (nome == "nulo") return Valor.Nulo
-        if (nome == "this" && thisObjeto != null) return thisObjeto!!
+    fun get(nome: String): Value {
+        if (nome == "nulo") return Value.Null
+        if (nome == "this" && thisObject != null) return thisObject!!
         //TODO: refatorar...
-        val valor = valores[nome]
+        val valor = values[nome]
         if (valor != null) return valor
-        if (thisObjeto != null) {
-            val campoValor = thisObjeto!!.campos[nome]
+        if (thisObject != null) {
+            val campoValor = thisObject!!.campos[nome]
             if (campoValor != null) return campoValor
         }
-        val externoValor = enclosing?.obter(nome)
-        if (externoValor != null && externoValor != Valor.Nulo) return externoValor
+        val externoValor = enclosing?.get(nome)
+        if (externoValor != null && externoValor != Value.Null) return externoValor
         throw MemoryError("Nao foi possivel achar a variavel")
     }
 
-    fun definirClasse(nome: String, declaracao: PortugolPPParser.DeclaracaoClasseContext?) {
+    fun defineClass(nome: String, declaracao: PortugolPPParser.DeclaracaoClasseContext?) {
         classes[nome] = declaracao
     }
 
-    fun obterClasse(nome: String): PortugolPPParser.DeclaracaoClasseContext? {
-        return classes[nome] ?: enclosing?.obterClasse(nome)
+    fun getClass(nome: String): PortugolPPParser.DeclaracaoClasseContext? {
+        return classes[nome] ?: enclosing?.getClass(nome)
     }
 
     fun classExists(nome: String): Boolean {
         return classes.containsKey(nome)
     }
 
-    fun atualizarOuDefinir(nome: String, valor: Valor) {
-        var ambienteAtual: Ambiente? = this
-        while (ambienteAtual != null) {
-            if (ambienteAtual.valores.containsKey(nome)) {
-                // Encontrou a variável, atualiza no escopo correto
-                ambienteAtual.valores[nome] = valor
+    fun updateOrDefine(nome: String, value: Value) {
+        var environmentAtual: Environment? = this
+        while (environmentAtual != null) {
+            if (environmentAtual.values.containsKey(nome)) {
+                //found the variable, update the correct scope
+                environmentAtual.values[nome] = value
                 return
             }
-            ambienteAtual = ambienteAtual.enclosing
+            environmentAtual = environmentAtual.enclosing
         }
-        valores[nome] = valor
+        values[nome] = value
     }
 }

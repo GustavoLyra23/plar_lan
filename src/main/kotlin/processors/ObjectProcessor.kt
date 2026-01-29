@@ -1,26 +1,26 @@
 package processors
 
-import models.Ambiente
-import models.Valor
+import models.Environment
+import models.Value
 import models.errors.SemanticError
 import org.gustavolyra.portugolpp.PortugolPPParser.DeclaracaoClasseContext
 import org.gustavolyra.portugolpp.PortugolPPParser.ProgramaContext
 
-fun obterSuperclasseSeHouver(ctx: DeclaracaoClasseContext): String? =
+fun getSuperClass(ctx: DeclaracaoClasseContext): String? =
     if (ctx.childCount > 3 && ctx.getChild(2).text == "estende") ctx.getChild(3).text else null
 
 
-fun validarSuperclasseExiste(superClasse: String, nomeClasse: String, global: Ambiente) {
-    global.obterClasse(superClasse)
-        ?: throw SemanticError("Classe base '$superClasse' não encontrada para a classe '$nomeClasse'")
+fun validateSuperClass(superClass: String, className: String, global: Environment) {
+    global.getClass(superClass)
+        ?: throw SemanticError("Classe base '$superClass' não encontrada para a classe '$className'")
 }
 
-fun indiceDaPalavra(ctx: DeclaracaoClasseContext, palavra: String): Int {
-    for (i in 0 until ctx.childCount) if (ctx.getChild(i).text == palavra) return i
+fun getIndexFromWord(ctx: DeclaracaoClasseContext, word: String): Int {
+    for (i in 0 until ctx.childCount) if (ctx.getChild(i).text == word) return i
     return -1
 }
 
-fun lerIdentificadoresAteChave(ctx: DeclaracaoClasseContext, inicio: Int): List<String> {
+fun readIdentitiesToKey(ctx: DeclaracaoClasseContext, inicio: Int): List<String> {
     val lista = mutableListOf<String>()
     var i = inicio
     while (i < ctx.childCount && ctx.getChild(i).text != "{") {
@@ -31,55 +31,55 @@ fun lerIdentificadoresAteChave(ctx: DeclaracaoClasseContext, inicio: Int): List<
     return lista
 }
 
-fun validarInterfacesOuErro(
+fun validateInterface(
     classeCtx: DeclaracaoClasseContext,
     nomeClasse: String,
     interfaces: List<String>,
-    global: Ambiente
+    global: Environment
 ) {
     interfaces.forEach { nome ->
-        global.obterInterface(nome)
+        global.getInterface(nome)
             ?: throw SemanticError("Interface '$nome' não encontrada")
-        if (!verificarImplementacaoInterface(classeCtx, nome, global)) {
+        if (!validateInterfaceImplementation(classeCtx, nome, global)) {
             throw SemanticError("A classe '$nomeClasse' não implementa todos os métodos da interface '$nome'")
         }
     }
 }
 
-fun verificarImplementacaoInterface(
+fun validateInterfaceImplementation(
     classeContext: DeclaracaoClasseContext,
     nomeInterface: String,
-    global: Ambiente
+    global: Environment
 ): Boolean {
-    val iface = global.obterInterface(nomeInterface) ?: return false
+    val iface = global.getInterface(nomeInterface) ?: return false
 
     val fornecidos = buildSet<String> {
         addAll(classeContext.declaracaoFuncao().map { it.ID().text })
         global.getSuperClasse(classeContext)
-            ?.let { global.obterClasse(it) }
+            ?.let { global.getClass(it) }
             ?.let { addAll(it.declaracaoFuncao().map { f -> f.ID().text }) }
     }
     return iface.assinaturaMetodo().all { it.ID().text in fornecidos }
 }
 
-fun visitClasses(tree: ProgramaContext, global: Ambiente) {
+fun visitClasses(tree: ProgramaContext, global: Environment) {
     tree.declaracao().forEach { decl ->
         decl.declaracaoClasse()?.let {
             val nome = it.ID(0).text
-            global.definirClasse(nome, it)
+            global.defineClass(nome, it)
         }
     }
 }
 
-fun visitInterfaces(tree: ProgramaContext, global: Ambiente) {
+fun visitInterfaces(tree: ProgramaContext, global: Environment) {
     tree.declaracao().forEach { decl ->
         decl.declaracaoInterface()?.let {
             val nome = it.ID().text
-            global.definirInterface(nome, it)
+            global.setInterface(nome, it)
         }
     }
 }
 
-fun comoObjetoOuErro(v: Valor): Valor.Objeto =
-    v as? Valor.Objeto
+fun comoObjetoOuErro(v: Value): Value.Object =
+    v as? Value.Object
         ?: throw SemanticError("Nao e possivel acessar propriedades de um nao-objeto: $v")
