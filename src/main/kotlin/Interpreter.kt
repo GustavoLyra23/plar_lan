@@ -21,7 +21,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     private var environment = global
 
     // ref to the function being executed
-    private var actualFunction: Value.Funcao? = null
+    private var actualFunction: Value.Fun? = null
 
     private val importedModules = mutableSetOf<String>()
 
@@ -137,7 +137,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         if (type != null) {
             if (value is Value.Object) {
                 val nomeClasse = value.klass
-                if (type != nomeClasse && value.superClasse != type && !value.interfaces.contains(type)) throw SemanticError(
+                if (type != nomeClasse && value.superClass != type && !value.interfaces.contains(type)) throw SemanticError(
                     "Tipo de variável '$type' não corresponde ao tipo do objeto '$nomeClasse'"
                 )
             } else {
@@ -152,12 +152,12 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         val name = ctx.ID().text
         val returnType = ctx.tipo()?.text
         if (isReturnInvalid(returnType, global)) throw SemanticError("Tipo de retorno inválido: $returnType")
-        val func = Value.Funcao(
-            nome = name,
-            declaracao = ctx,
-            tipoRetorno = returnType,
+        val func = Value.Fun(
+            name = name,
+            declaration = ctx,
+            returnType = returnType,
             closure = environment,
-            implementacao = definirImplementacao(ctx, name, Environment(environment))
+            implementation = definirImplementacao(ctx, name, Environment(environment))
         )
         environment.define(name, func)
         return func
@@ -175,11 +175,11 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
 
             val actualEnviromnent = environment
             environment = closure
-            val funcao = Value.Funcao(
+            val `fun` = Value.Fun(
                 ctx.ID().text, ctx, ctx.tipo()?.text, global
             )
             val oldFunction = actualFunction
-            actualFunction = funcao
+            actualFunction = `fun`
             try {
                 visit(ctx.bloco())
                 Value.Null
@@ -196,17 +196,17 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     override fun visitDeclaracaoRetornar(ctx: DeclaracaoRetornarContext): Value {
         val returnVal = ctx.expressao()?.let { visit(it) } ?: Value.Null
         // apenas valida se estivermos dentro de uma funcao
-        if (actualFunction != null && actualFunction!!.tipoRetorno != null) {
-            val expectedType = actualFunction!!.tipoRetorno
+        if (actualFunction != null && actualFunction!!.returnType != null) {
+            val expectedType = actualFunction!!.returnType
             val actualType = returnVal.typeString()
             if (expectedType != actualType) {
                 if (returnVal is Value.Object) {
                     //TODO: colocar verificao de superclasses e interfaces...
-                    if (returnVal.superClasse == expectedType || returnVal.interfaces.contains(expectedType)) throw RetornoException(
+                    if (returnVal.superClass == expectedType || returnVal.interfaces.contains(expectedType)) throw RetornoException(
                         returnVal
                     )
                 }
-                throw SemanticError("Erro de tipo: funcao '${actualFunction!!.nome}' deve retornar '$expectedType', mas esta retornando '$actualType'")
+                throw SemanticError("Erro de tipo: funcao '${actualFunction!!.name}' deve retornar '$expectedType', mas esta retornando '$actualType'")
             }
         }
         throw RetornoException(returnVal)
@@ -214,8 +214,8 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
 
     override fun visitDeclaracaoSe(ctx: DeclaracaoSeContext): Value {
         val condition = visit(ctx.expressao())
-        if (condition !is Value.Logico) throw SemanticError("Condição do 'if' deve ser lógica")
-        return if (condition.valor) visit(ctx.declaracao(0)) else ctx.declaracao(1)?.let { visit(it) } ?: Value.Null
+        if (condition !is Value.Logic) throw SemanticError("Condição do 'if' deve ser lógica")
+        return if (condition.value) visit(ctx.declaracao(0)) else ctx.declaracao(1)?.let { visit(it) } ?: Value.Null
     }
 
     override fun visitBloco(ctx: BlocoContext): Value {
@@ -250,7 +250,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
                 val obj = visit(acess.primario()) as? Value.Object
                     ?: throw SemanticError("Não é possível atribuir a uma propriedade de um não-objeto")
                 val v = rhs
-                obj.campos[acess.ID().text] = v
+                obj.fields[acess.ID().text] = v
                 v
             }
 
@@ -259,16 +259,16 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
                     is Value.List -> {
                         val i = visit(arr.expressao(0)) as? Value.Integer
                             ?: throw SemanticError("Índice de lista deve ser um número inteiro")
-                        val index = i.valor
+                        val index = i.value
                         if (index < 0) throw SemanticError("Índice negativo não permitido: $index")
-                        container.elementos[index] = rhs
+                        container.elements[index] = rhs
                         rhs
                     }
 
                     //TODO: arrumar indices nos mapas...
                     is Value.Map -> {
                         val chave = visit(arr.expressao(0))
-                        container.elementos[chave] = rhs
+                        container.elements[chave] = rhs
                         rhs
                     }
 
@@ -291,17 +291,17 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
 
         val property = ctx.ID().text
 
-        val value = objeto.campos[property] ?: return Value.Null
+        val value = objeto.fields[property] ?: return Value.Null
         return value
     }
 
     override fun visitLogicaOu(ctx: LogicaOuContext): Value {
         var left = visit(ctx.logicaE(0))
         for (i in 1 until ctx.logicaE().size) {
-            if (left is Value.Logico && left.valor) return Value.Logico(true)
+            if (left is Value.Logic && left.value) return Value.Logic(true)
             val right = visit(ctx.logicaE(i))
-            if (left !is Value.Logico || right !is Value.Logico) throw SemanticError("Operador 'ou' requer valores lógicos")
-            left = Value.Logico(right.valor)
+            if (left !is Value.Logic || right !is Value.Logic) throw SemanticError("Operador 'ou' requer valores lógicos")
+            left = Value.Logic(right.value)
         }
         return left
     }
@@ -309,10 +309,10 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     override fun visitLogicaE(ctx: LogicaEContext): Value {
         var left = visit(ctx.igualdade(0))
         for (i in 1 until ctx.igualdade().size) {
-            if (left is Value.Logico && !left.valor) return Value.Logico(false)
+            if (left is Value.Logic && !left.value) return Value.Logic(false)
             val right = visit(ctx.igualdade(i))
-            if (left !is Value.Logico || right !is Value.Logico) throw SemanticError("Operador 'e' requer valores lógicos")
-            left = Value.Logico(right.valor)
+            if (left !is Value.Logic || right !is Value.Logic) throw SemanticError("Operador 'e' requer valores lógicos")
+            left = Value.Logic(right.value)
         }
         return left
     }
@@ -330,14 +330,14 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
                     left == Value.Null || right == Value.Null -> false
                     else -> areEqual(left, right)
                 }
-                left = Value.Logico(result)
+                left = Value.Logic(result)
             } else if (operator == "!=") {
                 val resultado = when {
                     left == Value.Null && right == Value.Null -> false
                     left == Value.Null || right == Value.Null -> true
                     else -> !areEqual(left, right)
                 }
-                left = Value.Logico(resultado)
+                left = Value.Logic(resultado)
             }
         }
 
@@ -386,10 +386,10 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
             val operator = ctx.getChild(0).text
             val operando = visit(ctx.unario())
             return when (operator) {
-                "!" -> if (operando is Value.Logico) Value.Logico(!operando.valor) else throw SemanticError("Operador '!' requer valor lógico")
+                "!" -> if (operando is Value.Logic) Value.Logic(!operando.value) else throw SemanticError("Operador '!' requer valor lógico")
                 "-" -> when (operando) {
-                    is Value.Integer -> Value.Integer(-operando.valor)
-                    is Value.Real -> Value.Real(-operando.valor)
+                    is Value.Integer -> Value.Integer(-operando.value)
+                    is Value.Real -> Value.Real(-operando.value)
                     else -> throw SemanticError("Operador '-' requer valor numérico")
                 }
 
@@ -399,58 +399,58 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return visit(ctx.getChild(0))
     }
 
-    private fun buscarPropriedadeNaHierarquia(`object`: Value.Object, fieldName: String): Value? {
-        val fieldValue = `object`.campos[fieldName]
+    private fun findPropertyInHierarch(`object`: Value.Object, fieldName: String): Value? {
+        val fieldValue = `object`.fields[fieldName]
         if (fieldValue != null) {
             return fieldValue
         }
 
-        if (`object`.superClasse != null) {
-            val tempObjeto = criarObjetoTemporarioDaClasse(`object`.superClasse)
-            return buscarPropriedadeNaHierarquia(tempObjeto, fieldName)
+        if (`object`.superClass != null) {
+            val tempObjeto = createTempClassObject(`object`.superClass)
+            return findPropertyInHierarch(tempObjeto, fieldName)
         }
 
         return null
     }
 
 
-    private fun criarObjetoTemporarioDaClasse(nomeClasse: String): Value.Object {
-        val classe = global.getClass(nomeClasse) ?: throw SemanticError("Classe não encontrada: $nomeClasse")
+    private fun createTempClassObject(className: String): Value.Object {
+        val `class` = global.getClass(className) ?: throw SemanticError("Classe nao encontrada: $className")
 
-        val superClasse = global.getSuperClasse(classe)
-        val interfaces = global.getInterfaces(classe)
+        val superClass = global.getSuperClasse(`class`)
+        val interfaces = global.getInterfaces(`class`)
 
-        val `object` = Value.Object(nomeClasse, mutableMapOf(), superClasse, interfaces)
+        val `object` = Value.Object(className, mutableMapOf(), superClass, interfaces)
 
-        classe.declaracaoVar().forEach { decl ->
-            val nomeCampo = decl.ID().text
+        `class`.declaracaoVar().forEach { decl ->
+            val fieldName = decl.ID().text
             val value = decl.expressao()?.let {
-                val oldAmbiente = environment
+                val oldEnv = environment
                 environment = Environment(global).apply { thisObject = `object` }
                 val result = visit(it)
-                environment = oldAmbiente
+                environment = oldEnv
                 result
             } ?: Value.Null
-            `object`.campos[nomeCampo] = value
+            `object`.fields[fieldName] = value
         }
 
         return `object`
     }
 
-    private fun buscarMetodoNaHierarquia(`object`: Value.Object, nomeMetodo: String): DeclaracaoFuncaoContext? {
-        val classe = global.getClass(`object`.klass) ?: return null
-        val metodo = classe.declaracaoFuncao().find { it.ID().text == nomeMetodo }
-        if (metodo != null) return metodo
-        if (`object`.superClasse != null) {
-            val classeBase = global.getClass(`object`.superClasse) ?: return null
-            val metodoBase = classeBase.declaracaoFuncao().find { it.ID().text == nomeMetodo }
-            if (metodoBase != null) {
-                return metodoBase
+    private fun findMethodInHierarchy(`object`: Value.Object, methodName: String): DeclaracaoFuncaoContext? {
+        val `class` = global.getClass(`object`.klass) ?: return null
+        val method = `class`.declaracaoFuncao().find { it.ID().text == methodName }
+        if (method != null) return method
+        if (`object`.superClass != null) {
+            val baseClass = global.getClass(`object`.superClass) ?: return null
+            val baseMethod = baseClass.declaracaoFuncao().find { it.ID().text == methodName }
+            if (baseMethod != null) {
+                return baseMethod
             }
-            val superClasseDaBase = global.getSuperClasse(classeBase)
-            if (superClasseDaBase != null) {
-                val objectBase = Value.Object(`object`.superClasse, mutableMapOf(), superClasseDaBase)
-                return buscarMetodoNaHierarquia(objectBase, nomeMetodo)
+            val baseSuperClass = global.getSuperClasse(baseClass)
+            if (baseSuperClass != null) {
+                val objectBase = Value.Object(`object`.superClass, mutableMapOf(), baseSuperClass)
+                return findMethodInHierarchy(objectBase, methodName)
             }
         }
         return null
@@ -459,23 +459,23 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
 
     private fun isCall(ctx: ChamadaContext, i: Int, n: Int) = (i + 2) < n && ctx.getChild(i + 2).text == "("
 
-    private fun extrairArgumentosEPasso(ctx: ChamadaContext, i: Int, n: Int): Pair<List<Value>, Int> {
+    private fun extractArgumentsAndIndex(ctx: ChamadaContext, i: Int, n: Int): Pair<List<Value>, Int> {
         val temArgsCtx = (i + 3) < n && ctx.getChild(i + 3) is ArgumentosContext
-        val argumentos = if (temArgsCtx) {
+        val arguments = if (temArgsCtx) {
             val argsCtx = ctx.getChild(i + 3) as ArgumentosContext
             argsCtx.expressao().map { visit(it) }
         } else emptyList()
         val passo = if (temArgsCtx) 5 else 4
-        return argumentos to passo
+        return arguments to passo
     }
 
-    private fun chamarMetodoOuErro(obj: Value.Object, nome: String, argumentos: List<Value>): Value {
-        val metodo = buscarMetodoNaHierarquia(obj, nome)
+    private fun callMethodOrError(obj: Value.Object, nome: String, argumentos: List<Value>): Value {
+        val metodo = findMethodInHierarchy(obj, nome)
             ?: throw SemanticError("Metodo nao encontrado: $nome em classe ${obj.klass}")
-        return executarMetodo(obj, metodo, argumentos)
+        return executeMethod(obj, metodo, argumentos)
     }
 
-    private fun lerPropriedadeOuNulo(obj: Value.Object, nome: String): Value? = buscarPropriedadeNaHierarquia(obj, nome)
+    private fun readProperty(obj: Value.Object, nome: String): Value? = findPropertyInHierarch(obj, nome)
 
     override fun visitChamada(ctx: ChamadaContext): Value {
         ctx.acessoArray()?.let { return visit(it) }
@@ -492,11 +492,11 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
             val obj = comoObjetoOuErro(r)
 
             if (isCall(ctx, i, n)) {
-                val (argumentos, passo) = extrairArgumentosEPasso(ctx, i, n)
-                r = chamarMetodoOuErro(obj, id, argumentos)
+                val (argumentos, passo) = extractArgumentsAndIndex(ctx, i, n)
+                r = callMethodOrError(obj, id, argumentos)
                 i += passo
             } else {
-                r = lerPropriedadeOuNulo(obj, id) ?: Value.Null
+                r = readProperty(obj, id) ?: Value.Null
                 i += 2
             }
         }
@@ -504,24 +504,19 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
     override fun visitDeclaracaoEnquanto(ctx: DeclaracaoEnquantoContext): Value {
-        var iteracoes = 0
-        val maxIteracoes = LOOP.MAX_LOOP.valor
-
-        while (iteracoes < maxIteracoes) {
+        var iterationsNum = 0
+        while (iterationsNum < LOOP.MAX_LOOP.valor) {
             val condicao = visit(ctx.expressao())
-            println("Condição do loop: $condicao")
-
-            if (condicao !is Value.Logico) {
+            println("Condicao do loop: $condicao")
+            if (condicao !is Value.Logic)
                 throw SemanticError("Condição do 'enquanto' deve ser um valor lógico")
-            }
-
-            if (!condicao.valor) {
+            if (!condicao.value) {
                 println("Condição falsa, saindo do loop")
                 break
             }
 
-            iteracoes++
-            println("Iteração $iteracoes do loop")
+            iterationsNum++
+            println("Iteração $iterationsNum do loop")
 
             try {
                 visit(ctx.declaracao())
@@ -534,7 +529,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
             }
         }
 
-        if (iteracoes >= maxIteracoes) {
+        if (iterationsNum >= LOOP.MAX_LOOP.valor) {
             println("Aviso: Loop infinito detectado! Saindo do loop.")
             return Value.Null
         }
@@ -544,9 +539,9 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     override fun visitDeclaracaoPara(ctx: DeclaracaoParaContext): Value {
         ctx.declaracaoVar()?.let { visit(it) } ?: ctx.expressao(0)?.let { visit(it) }
         loop@ while (true) {
-            val cond = visit(ctx.expressao(0)) as? Value.Logico
-                ?: throw SemanticError("Condição do 'para' deve ser um valor lógico")
-            if (!cond.valor) break
+            val cond = visit(ctx.expressao(0)) as? Value.Logic
+                ?: throw SemanticError("Condicao do 'para' deve ser um valor logico")
+            if (!cond.value) break
 
             var doIncrement = true
             try {
@@ -582,7 +577,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
             }
             val c = visit(ctx.expressao())
             val logicRes =
-                (c as? Value.Logico)?.valor ?: throw SemanticError("Condição do 'enquanto' deve ser um valor lógico")
+                (c as? Value.Logic)?.value ?: throw SemanticError("Condicao do 'enquanto' deve ser um valor logico")
             if (!logicRes) break
             if (++iter >= 100) {
                 println("Loop infinito detectado! Saindo do loop.")
@@ -613,8 +608,8 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     private fun validarAcessoArray(ctx: AcessoArrayContext, container: Value.List): Value {
         val indice = visit(ctx.expressao(0))
         if (indice !is Value.Integer) throw SemanticError("Índice de lista deve ser um número inteiro")
-        if (indice.valor < 0 || indice.valor >= container.tamanho) throw SemanticError("Índice fora dos limites da lista: ${indice.valor}")
-        return container.elementos[indice.valor]
+        if (indice.value < 0 || indice.value >= container.size) throw SemanticError("Índice fora dos limites da lista: ${indice.value}")
+        return container.elements[indice.value]
     }
 
     private fun validarAcessoMapa(ctx: AcessoArrayContext, container: Value.Map): Value {
@@ -622,7 +617,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
 
         // Para acesso bidimensional em mapas
         if (ctx.expressao().size > 1) {
-            val primeiroElemento = container.elementos[chave] ?: Value.Null
+            val primeiroElemento = container.elements[chave] ?: Value.Null
             val segundoIndice = visit(ctx.expressao(1))
 
             when (primeiroElemento) {
@@ -632,23 +627,23 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
                             throw SemanticError("Segundo índice deve ser um número inteiro para acessar uma lista")
                         }
 
-                        segundoIndice.valor < 0 || segundoIndice.valor >= primeiroElemento.elementos.size -> {
-                            throw SemanticError("Segundo índice fora dos limites da lista: ${segundoIndice.valor}")
+                        segundoIndice.value < 0 || segundoIndice.value >= primeiroElemento.elements.size -> {
+                            throw SemanticError("Segundo índice fora dos limites da lista: ${segundoIndice.value}")
                         }
 
-                        else -> return primeiroElemento.elementos[segundoIndice.valor]
+                        else -> return primeiroElemento.elements[segundoIndice.value]
                     }
                 }
                 //TODO: rever mapa case
                 is Value.Map -> {
-                    return primeiroElemento.elementos[segundoIndice] ?: Value.Null
+                    return primeiroElemento.elements[segundoIndice] ?: Value.Null
                 }
                 // TODO: rever objeto case
                 is Value.Object -> {
                     if (segundoIndice !is Value.Text) {
                         throw SemanticError("Chave para acessar campo de objeto deve ser texto")
                     }
-                    return primeiroElemento.campos[segundoIndice.valor] ?: Value.Null
+                    return primeiroElemento.fields[segundoIndice.value] ?: Value.Null
                 }
 
                 else -> {
@@ -656,7 +651,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
                 }
             }
         }
-        return container.elementos[chave] ?: Value.Null
+        return container.elements[chave] ?: Value.Null
     }
 
     override fun visitAcessoArray(ctx: AcessoArrayContext): Value {
@@ -682,96 +677,96 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
                 global.getClass(objeto.klass) ?: throw SemanticError("Classe não encontrada: ${objeto.klass}")
             val metodo = classe.declaracaoFuncao().find { it.ID().text == funcName }
                 ?: throw SemanticError("Método não encontrado: $funcName")
-            executarMetodo(objeto, metodo, argumentos)
+            executeMethod(objeto, metodo, argumentos)
         } else {
-            chamadaFuncao(funcName, argumentos)
+            functionCall(funcName, argumentos)
         }
     }
 
-    private fun resolverFuncao(nome: String): Value.Funcao =
-        runCatching { environment.get(nome) as? Value.Funcao }.getOrNull()
-            ?: throw SemanticError("Função não encontrada ou não é função: $nome")
+    private fun solveFunction(nome: String): Value.Fun =
+        runCatching { environment.get(nome) as? Value.Fun }.getOrNull()
+            ?: throw SemanticError("Funçao nao encontrada ou nao seria função: $nome")
 
-    private fun chamadaFuncao(nome: String, argumentos: List<Value>): Value {
+    private fun functionCall(nome: String, argumentos: List<Value>): Value {
         environment.thisObject?.let { obj ->
-            buscarMetodoNaHierarquia(obj, nome)?.let { ctx ->
-                return executarMetodo(
+            findMethodInHierarchy(obj, nome)?.let { ctx ->
+                return executeMethod(
                     obj, ctx, argumentos
                 )
             }
         }
-        val funcao = resolverFuncao(nome)
-        return funcao.implementacao?.invoke(argumentos)
-            ?: throw SemanticError("Função '$nome' não possui implementação.")
+        val function = solveFunction(nome)
+        return function.implementation?.invoke(argumentos)
+            ?: throw SemanticError("Funcao '$nome' nao possui implementacao.")
     }
 
 
-    private fun executarMetodo(
+    private fun executeMethod(
         `object`: Value.Object,
-        metodo: DeclaracaoFuncaoContext,
-        argumentos: List<Value>
+        method: DeclaracaoFuncaoContext,
+        arguments: List<Value>
     ): Value {
-        val metodoEnvironment = Environment(global)
-        metodoEnvironment.thisObject = `object`
+        val envMethod = Environment(global)
+        envMethod.thisObject = `object`
 
-        val funcao = Value.Funcao(
-            metodo.ID().text, metodo, metodo.tipo()?.text, metodoEnvironment
+        val `fun` = Value.Fun(
+            method.ID().text, method, method.tipo()?.text, envMethod
         )
-        val funcaoAnterior = actualFunction
-        actualFunction = funcao
+        val previousFunction = actualFunction
+        actualFunction = `fun`
 
-        val params = metodo.listaParams()?.param() ?: listOf()
+        val params = method.listaParams()?.param() ?: listOf()
         for (i in params.indices) {
             val paramNome = params[i].ID().text
 
-            if (i < argumentos.size) {
-                val valorArg = argumentos[i]
-                metodoEnvironment.define(paramNome, valorArg)
+            if (i < arguments.size) {
+                val argVal = arguments[i]
+                envMethod.define(paramNome, argVal)
             } else {
-                metodoEnvironment.define(paramNome, Value.Null)
+                envMethod.define(paramNome, Value.Null)
             }
         }
 
         val oldAmbiente = environment
-        environment = metodoEnvironment
+        environment = envMethod
 
         try {
-            visit(metodo.bloco())
+            visit(method.bloco())
             return Value.Null
-        } catch (retorno: RetornoException) {
-            return retorno.value
+        } catch (err: RetornoException) {
+            return err.value
         } finally {
             environment = oldAmbiente
-            actualFunction = funcaoAnterior
+            actualFunction = previousFunction
         }
     }
 
-    private fun resolverIdPrimario(ctx: PrimarioContext): Value {
-        val nome = ctx.ID().text
+    private fun solveId(ctx: PrimarioContext): Value {
+        val name = ctx.ID().text
         if (ctx.childCount > 1 && ctx.getChild(1).text == "(") {
-            val argumentos = if (ctx.childCount > 2 && ctx.getChild(2) is ArgumentosContext) {
+            val arguments = if (ctx.childCount > 2 && ctx.getChild(2) is ArgumentosContext) {
                 val argsCtx = ctx.getChild(2) as ArgumentosContext
                 argsCtx.expressao().map { visit(it) }
             } else {
                 emptyList()
             }
-            return chamadaFuncao(nome, argumentos)
+            return functionCall(name, arguments)
         } else {
             try {
-                return environment.get(nome)
+                return environment.get(name)
             } catch (e: Exception) {
                 throw e
             }
         }
     }
 
-    private fun resolverClassePrimario(ctx: PrimarioContext): Value {
+    private fun solveClass(ctx: PrimarioContext): Value {
         val match = Regex("novo([A-Za-z0-9_]+)\\(.*\\)").find(ctx.text)
         if (match != null) {
-            val nomeClasse = match.groupValues[1]
+            val className = match.groupValues[1]
 
-            val classe = global.getClass(nomeClasse) ?: throw SemanticError("Classe não encontrada: $nomeClasse")
-            return criarObjetoClasse(nomeClasse, ctx, classe)
+            val `class` = global.getClass(className) ?: throw SemanticError("Classe não encontrada: $className")
+            return createClassObject(className, ctx, `class`)
         } else {
             throw SemanticError("Sintaxe inválida para criação de objeto")
         }
@@ -790,11 +785,11 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
             }
 
             ctx.TEXTO_LITERAL() != null -> Value.Text(ctx.TEXTO_LITERAL().text.removeSurrounding("\""))
-            ctx.ID() != null && !ctx.text.startsWith("novo") -> resolverIdPrimario(ctx);
-            ctx.text == "verdadeiro" -> Value.Logico(true)
-            ctx.text == "falso" -> Value.Logico(false)
+            ctx.ID() != null && !ctx.text.startsWith("novo") -> solveId(ctx);
+            ctx.text == "verdadeiro" -> Value.Logic(true)
+            ctx.text == "falso" -> Value.Logic(false)
             ctx.text == "este" -> environment.thisObject ?: throw SemanticError("'este' fora de contexto de objeto")
-            ctx.text.startsWith("novo") -> resolverClassePrimario(ctx)
+            ctx.text.startsWith("novo") -> solveClass(ctx)
             ctx.expressao() != null -> visit(ctx.expressao())
             else -> {
                 throw SemanticError("Tipo primario invalido")
@@ -802,8 +797,8 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    //TODO: testar mais essa funcao de extracao argumentos do constructor..., ja testei com tipos simples e com objetos
-    private fun extrairArgumentosDoConstructor(ctx: PrimarioContext): List<Value> {
+    //TODO: do more tests on this function....
+    private fun extractConstructorArgs(ctx: PrimarioContext): List<Value> {
         val args = mutableListOf<Value>()
         if (!ctx.argumentos().isEmpty) {
             ctx.argumentos().expressao().forEach { expr ->
@@ -813,48 +808,48 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return args
     }
 
-    //TODO: rever uso de recursao...
-    private fun inicializarCamposDaClasseBase(`object`: Value.Object, nomeClasseBase: String) {
-        val classeBase = global.getClass(nomeClasseBase) ?: return
+    //TODO: remove recursion.
+    private fun initializeBaseClassFields(`object`: Value.Object, baseClassName: String) {
+        val baseClass = global.getClass(baseClassName) ?: return
 
-        val superClasseDaBase = global.getSuperClasse(classeBase)
-        if (superClasseDaBase != null) {
-            inicializarCamposDaClasseBase(`object`, superClasseDaBase)
+        val superBaseClass = global.getSuperClasse(baseClass)
+        if (superBaseClass != null) {
+            initializeBaseClassFields(`object`, superBaseClass)
         }
 
-        classeBase.declaracaoVar().forEach { decl ->
-            val nomeCampo = decl.ID().text
-            if (!`object`.campos.containsKey(nomeCampo)) {
+        baseClass.declaracaoVar().forEach { decl ->
+            val fieldName = decl.ID().text
+            if (!`object`.fields.containsKey(fieldName)) {
                 val oldAmbiente = environment
                 environment = Environment(global).apply { thisObject = `object` }
                 val value = decl.expressao()?.let { visit(it) } ?: Value.Null
-                `object`.campos[nomeCampo] = value
+                `object`.fields[fieldName] = value
                 environment = oldAmbiente
             }
         }
     }
 
-    private fun criarObjetoClasse(nomeClasse: String, ctx: PrimarioContext, classe: DeclaracaoClasseContext): Value {
-        val superClasse = global.getSuperClasse(classe)
+    private fun createClassObject(nomeClasse: String, ctx: PrimarioContext, classe: DeclaracaoClasseContext): Value {
+        val superClass = global.getSuperClasse(classe)
         val interfaces = global.getInterfaces(classe)
 
-        val `object` = Value.Object(nomeClasse, mutableMapOf(), superClasse, interfaces)
+        val `object` = Value.Object(nomeClasse, mutableMapOf(), superClass, interfaces)
 
-        if (superClasse != null) inicializarCamposDaClasseBase(`object`, superClasse)
+        if (superClass != null) initializeBaseClassFields(`object`, superClass)
 
         classe.declaracaoVar().forEach { decl ->
-            val nomeCampo = decl.ID().text
+            val fieldName = decl.ID().text
             val oldAmbiente = environment
             environment = Environment(global).apply { thisObject = `object` }
             val value = decl.expressao()?.let { visit(it) } ?: Value.Null
-            `object`.campos[nomeCampo] = value
+            `object`.fields[fieldName] = value
             environment = oldAmbiente
         }
 
-        val inicializarMetodo = classe.declaracaoFuncao().find { it.ID().text == "inicializar" }
-        if (inicializarMetodo != null) {
-            val argumentos = extrairArgumentosDoConstructor(ctx)
-            executarMetodo(`object`, inicializarMetodo, argumentos)
+        val initializeMethod = classe.declaracaoFuncao().find { it.ID().text == "inicializar" }
+        if (initializeMethod != null) {
+            val argumentos = extractConstructorArgs(ctx)
+            executeMethod(`object`, initializeMethod, argumentos)
         }
         return `object`
     }

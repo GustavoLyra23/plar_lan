@@ -29,9 +29,9 @@ fun interactiveMode() {
         when {
             input == "exit" -> exitProcess(0)
             input.startsWith("run ") -> {
-                val caminho = input.substring(4).trim()
-                val arquivo = solvePath(caminho)
-                execFile(arquivo)
+                val path = input.substring(4).trim()
+                val file = solvePath(path)
+                execFile(file)
             }
 
             input == "reset" -> interpreter = Interpreter()

@@ -4,23 +4,23 @@ import org.gustavolyra.portugolpp.PortugolPPParser.ChamadaContext
 fun extractValueToPrint(value: Value): String {
     return when (value) {
         is Value.List -> {
-            val elementos = value.elementos.map { extractValueToPrint(it) }
+            val elementos = value.elements.map { extractValueToPrint(it) }
             "[${elementos.joinToString(", ")}]"
         }
 
         is Value.Map -> {
-            val entradas = value.elementos.map { (chave, valor) ->
+            val entradas = value.elements.map { (chave, valor) ->
                 "${extractValueToPrint(chave)}: ${extractValueToPrint(valor)}"
             }
             "[[${entradas.joinToString(", ")}]]"
         }
 
-        is Value.Text -> "\"${value.valor}\""
-        is Value.Integer -> value.valor.toString()
-        is Value.Real -> value.valor.toString()
-        is Value.Logico -> if (value.valor) "verdadeiro" else "falso"
+        is Value.Text -> "\"${value.value}\""
+        is Value.Integer -> value.value.toString()
+        is Value.Real -> value.value.toString()
+        is Value.Logic -> if (value.value) "verdadeiro" else "falso"
         is Value.Object -> "[Objeto ${value.klass}]"
-        is Value.Funcao -> "[fun ${value.nome}]"
+        is Value.Fun -> "[fun ${value.name}]"
         Value.Null -> "nulo"
         else -> value.toString()
     }
@@ -28,18 +28,18 @@ fun extractValueToPrint(value: Value): String {
 
 fun extractValueToString(value: Value): String {
     return when (value) {
-        is Value.Integer -> value.valor.toString()
-        is Value.Real -> value.valor.toString()
-        is Value.Logico -> if (value.valor) "verdadeiro" else "falso"
+        is Value.Integer -> value.value.toString()
+        is Value.Real -> value.value.toString()
+        is Value.Logic -> if (value.value) "verdadeiro" else "falso"
         is Value.Null -> "nulo"
-        is Value.Text -> value.valor
+        is Value.Text -> value.value
         is Value.List -> {
-            val elementos = value.elementos.map { extractValueToString(it) }
+            val elementos = value.elements.map { extractValueToString(it) }
             "[${elementos.joinToString(", ")}]"
         }
 
         is Value.Map -> {
-            val entradas = value.elementos.map { (chave, valor) ->
+            val entradas = value.elements.map { (chave, valor) ->
                 "${extractValueToString(chave)}: ${extractValueToString(valor)}"
             }
             "[[${entradas.joinToString(", ")}]]"

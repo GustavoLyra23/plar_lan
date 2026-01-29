@@ -22,22 +22,22 @@ fun resolveAddOperator(left: Value, right: Value): Value {
         }
 
         left is Value.Integer && right is Value.Integer -> {
-            val resultado = Value.Integer(left.valor + right.valor)
+            val resultado = Value.Integer(left.value + right.value)
             resultado
         }
 
         left is Value.Real && right is Value.Real -> {
-            val resultado = Value.Real(left.valor + right.valor)
+            val resultado = Value.Real(left.value + right.value)
             resultado
         }
 
         left is Value.Integer && right is Value.Real -> {
-            val resultado = Value.Real(left.valor.toDouble() + right.valor)
+            val resultado = Value.Real(left.value.toDouble() + right.value)
             resultado
         }
 
         left is Value.Real && right is Value.Integer -> {
-            val resultado = Value.Real(left.valor + right.valor.toDouble())
+            val resultado = Value.Real(left.value + right.value.toDouble())
             resultado
         }
 
@@ -50,22 +50,22 @@ fun resolveAddOperator(left: Value, right: Value): Value {
 fun solveSubOperator(left: Value, right: Value): Value {
     return when {
         left is Value.Integer && right is Value.Integer -> {
-            val resultado = Value.Integer(left.valor - right.valor)
+            val resultado = Value.Integer(left.value - right.value)
             resultado
         }
 
         left is Value.Real && right is Value.Real -> {
-            val resultado = Value.Real(left.valor - right.valor)
+            val resultado = Value.Real(left.value - right.value)
             resultado
         }
 
         left is Value.Integer && right is Value.Real -> {
-            val resultado = Value.Real(left.valor.toDouble() - right.valor)
+            val resultado = Value.Real(left.value.toDouble() - right.value)
             resultado
         }
 
         left is Value.Real && right is Value.Integer -> {
-            val resultado = Value.Real(left.valor - right.valor.toDouble())
+            val resultado = Value.Real(left.value - right.value.toDouble())
             resultado
         }
 
@@ -90,10 +90,10 @@ fun processMultiplication(
 
 fun solveMultiplicationOperator(left: Value, right: Value): Value {
     return when {
-        left is Value.Integer && right is Value.Integer -> Value.Integer(left.valor * right.valor)
-        left is Value.Real && right is Value.Real -> Value.Real(left.valor * right.valor)
-        left is Value.Integer && right is Value.Real -> Value.Real(left.valor.toDouble() * right.valor)
-        left is Value.Real && right is Value.Integer -> Value.Real(left.valor * right.valor.toDouble())
+        left is Value.Integer && right is Value.Integer -> Value.Integer(left.value * right.value)
+        left is Value.Real && right is Value.Real -> Value.Real(left.value * right.value)
+        left is Value.Integer && right is Value.Real -> Value.Real(left.value.toDouble() * right.value)
+        left is Value.Real && right is Value.Integer -> Value.Real(left.value * right.value.toDouble())
         else -> throw RuntimeException("Operador '*' não suportado para ${left::class.simpleName} e ${right::class.simpleName}")
     }
 }
@@ -101,23 +101,23 @@ fun solveMultiplicationOperator(left: Value, right: Value): Value {
 fun solveModuleOperator(left: Value, right: Value): Value {
     return when {
         left is Value.Integer && right is Value.Integer -> {
-            if (right.valor == 0) throw RuntimeException("Módulo por zero")
-            Value.Integer(left.valor % right.valor)
+            if (right.value == 0) throw RuntimeException("Módulo por zero")
+            Value.Integer(left.value % right.value)
         }
 
         left is Value.Real && right is Value.Real -> {
-            if (right.valor == 0.0) throw RuntimeException("Módulo por zero")
-            Value.Real(left.valor % right.valor)
+            if (right.value == 0.0) throw RuntimeException("Módulo por zero")
+            Value.Real(left.value % right.value)
         }
 
         left is Value.Integer && right is Value.Real -> {
-            if (right.valor == 0.0) throw RuntimeException("Módulo por zero")
-            Value.Real(left.valor.toDouble() % right.valor)
+            if (right.value == 0.0) throw RuntimeException("Módulo por zero")
+            Value.Real(left.value.toDouble() % right.value)
         }
 
         left is Value.Real && right is Value.Integer -> {
-            if (right.valor == 0) throw RuntimeException("Módulo por zero")
-            Value.Real(left.valor % right.valor.toDouble())
+            if (right.value == 0) throw RuntimeException("Módulo por zero")
+            Value.Real(left.value % right.value.toDouble())
         }
 
         else -> throw RuntimeException("Operador '%' não suportado para ${left::class.simpleName} e ${right::class.simpleName}")
@@ -126,17 +126,17 @@ fun solveModuleOperator(left: Value, right: Value): Value {
 
 fun solveDivisionOperator(left: Value, right: Value): Value {
     return when {
-        (right is Value.Integer && right.valor == 0) || (right is Value.Real && right.valor == 0.0) -> throw RuntimeException(
+        (right is Value.Integer && right.value == 0) || (right is Value.Real && right.value == 0.0) -> throw RuntimeException(
             "Divisão por zero"
         )
 
-        left is Value.Integer && right is Value.Integer -> if (left.valor % right.valor == 0) Value.Integer(
-            left.valor / right.valor
-        ) else Value.Real(left.valor.toDouble() / right.valor)
+        left is Value.Integer && right is Value.Integer -> if (left.value % right.value == 0) Value.Integer(
+            left.value / right.value
+        ) else Value.Real(left.value.toDouble() / right.value)
 
-        left is Value.Real && right is Value.Real -> Value.Real(left.valor / right.valor)
-        left is Value.Integer && right is Value.Real -> Value.Real(left.valor.toDouble() / right.valor)
-        left is Value.Real && right is Value.Integer -> Value.Real(left.valor / right.valor.toDouble())
+        left is Value.Real && right is Value.Real -> Value.Real(left.value / right.value)
+        left is Value.Integer && right is Value.Real -> Value.Real(left.value.toDouble() / right.value)
+        left is Value.Real && right is Value.Integer -> Value.Real(left.value / right.value.toDouble())
         else -> throw RuntimeException("Operador '/' não suportado para ${left::class.simpleName} e ${right::class.simpleName}")
     }
 }

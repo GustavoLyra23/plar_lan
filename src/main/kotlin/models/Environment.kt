@@ -10,19 +10,19 @@ class Environment(val enclosing: Environment? = null) {
 
     private val interfaces = mutableMapOf<String, PortugolPPParser.DeclaracaoInterfaceContext>()
 
-    //referente a instancia que estamos...
+    // refers to the actual instance
     var thisObject: Value.Object? = null
 
-    fun setInterface(nome: String, declaracao: PortugolPPParser.DeclaracaoInterfaceContext) {
-        interfaces[nome] = declaracao
+    fun setInterface(name: String, declaration: PortugolPPParser.DeclaracaoInterfaceContext) {
+        interfaces[name] = declaration
     }
 
-    fun getInterface(nome: String): PortugolPPParser.DeclaracaoInterfaceContext? {
-        return interfaces[nome] ?: enclosing?.getInterface(nome)
+    fun getInterface(name: String): PortugolPPParser.DeclaracaoInterfaceContext? {
+        return interfaces[name] ?: enclosing?.getInterface(name)
     }
 
-    fun interfaceExists(nome: String): Boolean {
-        return this.interfaces.containsKey(nome)
+    fun interfaceExists(name: String): Boolean {
+        return this.interfaces.containsKey(name)
     }
 
     fun getInterfaces(classeContext: PortugolPPParser.DeclaracaoClasseContext): List<String> {
@@ -52,47 +52,47 @@ class Environment(val enclosing: Environment? = null) {
     }
 
 
-    fun define(nome: String, value: Value) {
-        values[nome] = value
+    fun define(name: String, value: Value) {
+        values[name] = value
     }
 
-    fun get(nome: String): Value {
-        if (nome == "nulo") return Value.Null
-        if (nome == "this" && thisObject != null) return thisObject!!
+    fun get(name: String): Value {
+        if (name == "nulo") return Value.Null
+        if (name == "this" && thisObject != null) return thisObject!!
         //TODO: refatorar...
-        val valor = values[nome]
-        if (valor != null) return valor
+        val value = values[name]
+        if (value != null) return value
         if (thisObject != null) {
-            val campoValor = thisObject!!.campos[nome]
-            if (campoValor != null) return campoValor
+            val fieldValue = thisObject!!.fields[name]
+            if (fieldValue != null) return fieldValue
         }
-        val externoValor = enclosing?.get(nome)
-        if (externoValor != null && externoValor != Value.Null) return externoValor
+        val externalValue = enclosing?.get(name)
+        if (externalValue != null && externalValue != Value.Null) return externalValue
         throw MemoryError("Nao foi possivel achar a variavel")
     }
 
-    fun defineClass(nome: String, declaracao: PortugolPPParser.DeclaracaoClasseContext?) {
-        classes[nome] = declaracao
+    fun defineClass(name: String, declaration: PortugolPPParser.DeclaracaoClasseContext?) {
+        classes[name] = declaration
     }
 
-    fun getClass(nome: String): PortugolPPParser.DeclaracaoClasseContext? {
-        return classes[nome] ?: enclosing?.getClass(nome)
+    fun getClass(name: String): PortugolPPParser.DeclaracaoClasseContext? {
+        return classes[name] ?: enclosing?.getClass(name)
     }
 
-    fun classExists(nome: String): Boolean {
-        return classes.containsKey(nome)
+    fun classExists(name: String): Boolean {
+        return classes.containsKey(name)
     }
 
-    fun updateOrDefine(nome: String, value: Value) {
-        var environmentAtual: Environment? = this
-        while (environmentAtual != null) {
-            if (environmentAtual.values.containsKey(nome)) {
+    fun updateOrDefine(name: String, value: Value) {
+        var actualEnv: Environment? = this
+        while (actualEnv != null) {
+            if (actualEnv.values.containsKey(name)) {
                 //found the variable, update the correct scope
-                environmentAtual.values[nome] = value
+                actualEnv.values[name] = value
                 return
             }
-            environmentAtual = environmentAtual.enclosing
+            actualEnv = actualEnv.enclosing
         }
-        values[nome] = value
+        values[name] = value
     }
 }
