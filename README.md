@@ -8,7 +8,7 @@
 - <mark>**Control structures**</mark> (conditionals, loops)
 - <mark>**Functions and methods**</mark> with parameters and return values
 - <mark>**I/O functions**</mark> for input and output operations
-- <mark>**Collections**<mark/> such as lists and maps
+- <mark>**Collections**</mark> such as lists and maps
 - <mark>**Thread support**</mark> for asynchronous execution
 - <mark>**Multiple module support**</mark> – import from other files
 - <mark>**Closure support**</mark>
