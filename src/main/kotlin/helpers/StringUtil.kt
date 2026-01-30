@@ -15,7 +15,7 @@ fun extractValueToPrint(value: Value): String {
             "[[${entradas.joinToString(", ")}]]"
         }
 
-        is Value.Text -> "\"${value.value}\""
+        is Value.Text -> value.value
         is Value.Integer -> value.value.toString()
         is Value.Real -> value.value.toString()
         is Value.Logic -> if (value.value) "verdadeiro" else "falso"
@@ -49,5 +49,4 @@ fun extractValueToString(value: Value): String {
     }
 }
 
-fun isDot(ctx: ChamadaContext, i: Int) =
-    i < ctx.childCount && ctx.getChild(i).text == "."
+fun isDot(ctx: ChamadaContext, i: Int) = i < ctx.childCount && ctx.getChild(i).text == "."
