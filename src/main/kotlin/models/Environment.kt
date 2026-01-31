@@ -1,23 +1,25 @@
 package models
 
 import models.errors.MemoryError
-import org.gustavolyra.portugolpp.PortugolPPParser
+import org.gustavolyra.PlarParser
+import org.gustavolyra.PlarParser.DeclaracaoClasseContext
+import org.gustavolyra.PlarParser.DeclaracaoInterfaceContext
 
 class Environment(val enclosing: Environment? = null) {
     private val values = mutableMapOf<String, Value>()
 
-    private val classes = mutableMapOf<String, PortugolPPParser.DeclaracaoClasseContext?>()
+    private val classes = mutableMapOf<String, DeclaracaoClasseContext?>()
 
-    private val interfaces = mutableMapOf<String, PortugolPPParser.DeclaracaoInterfaceContext>()
+    private val interfaces = mutableMapOf<String, DeclaracaoInterfaceContext>()
 
     // refers to the actual instance
     var thisObject: Value.Object? = null
 
-    fun setInterface(name: String, declaration: PortugolPPParser.DeclaracaoInterfaceContext) {
+    fun setInterface(name: String, declaration: DeclaracaoInterfaceContext) {
         interfaces[name] = declaration
     }
 
-    fun getInterface(name: String): PortugolPPParser.DeclaracaoInterfaceContext? {
+    fun getInterface(name: String): DeclaracaoInterfaceContext? {
         return interfaces[name] ?: enclosing?.getInterface(name)
     }
 
@@ -25,7 +27,7 @@ class Environment(val enclosing: Environment? = null) {
         return this.interfaces.containsKey(name)
     }
 
-    fun getInterfaces(classeContext: PortugolPPParser.DeclaracaoClasseContext): List<String> {
+    fun getInterfaces(classeContext: DeclaracaoClasseContext): List<String> {
         val result = mutableListOf<String>()
         var foundImplements = false
         for (i in 0 until classeContext.childCount) {
@@ -42,7 +44,7 @@ class Environment(val enclosing: Environment? = null) {
         return result
     }
 
-    fun getSuperClasse(classeContext: PortugolPPParser.DeclaracaoClasseContext): String? {
+    fun getSuperClasse(classeContext: PlarParser.DeclaracaoClasseContext): String? {
         for (i in 0 until classeContext.childCount) {
             if (classeContext.getChild(i).text == "estende" && i + 1 < classeContext.childCount) {
                 return classeContext.getChild(i + 1).text
@@ -71,11 +73,11 @@ class Environment(val enclosing: Environment? = null) {
         throw MemoryError("Nao foi possivel achar a variavel")
     }
 
-    fun defineClass(name: String, declaration: PortugolPPParser.DeclaracaoClasseContext?) {
+    fun defineClass(name: String, declaration: DeclaracaoClasseContext?) {
         classes[name] = declaration
     }
 
-    fun getClass(name: String): PortugolPPParser.DeclaracaoClasseContext? {
+    fun getClass(name: String): DeclaracaoClasseContext? {
         return classes[name] ?: enclosing?.getClass(name)
     }
 

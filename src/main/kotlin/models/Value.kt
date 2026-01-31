@@ -1,7 +1,7 @@
 package models
 
 import models.enums.BasicTypes
-import org.gustavolyra.portugolpp.PortugolPPParser
+import org.gustavolyra.PlarParser
 
 sealed class Value {
 
@@ -41,7 +41,7 @@ sealed class Value {
     data class Fun(
         val name: String,
         //TODO: find a better use case for this...
-        val declaration: PortugolPPParser.DeclaracaoFuncaoContext? = null,
+        val declaration: PlarParser.DeclaracaoFuncaoContext? = null,
         val returnType: String? = null,
         val closure: Environment,
         val implementation: ((kotlin.collections.List<Value>) -> Value)? = null,

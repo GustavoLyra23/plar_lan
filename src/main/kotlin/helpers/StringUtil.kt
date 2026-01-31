@@ -1,18 +1,18 @@
 import models.Value
-import org.gustavolyra.portugolpp.PortugolPPParser.ChamadaContext
+import org.gustavolyra.PlarParser
 
 fun extractValueToPrint(value: Value): String {
     return when (value) {
         is Value.List -> {
-            val elementos = value.elements.map { extractValueToPrint(it) }
-            "[${elementos.joinToString(", ")}]"
+            val elements = value.elements.map { extractValueToPrint(it) }
+            "[${elements.joinToString(", ")}]"
         }
 
         is Value.Map -> {
-            val entradas = value.elements.map { (chave, valor) ->
-                "${extractValueToPrint(chave)}: ${extractValueToPrint(valor)}"
+            val entries = value.elements.map { (key, value) ->
+                "${extractValueToPrint(key)}: ${extractValueToPrint(value)}"
             }
-            "[[${entradas.joinToString(", ")}]]"
+            "[[${entries.joinToString(", ")}]]"
         }
 
         is Value.Text -> value.value
@@ -34,19 +34,19 @@ fun extractValueToString(value: Value): String {
         is Value.Null -> "nulo"
         is Value.Text -> value.value
         is Value.List -> {
-            val elementos = value.elements.map { extractValueToString(it) }
-            "[${elementos.joinToString(", ")}]"
+            val elements = value.elements.map { extractValueToString(it) }
+            "[${elements.joinToString(", ")}]"
         }
 
         is Value.Map -> {
-            val entradas = value.elements.map { (chave, valor) ->
+            val entries = value.elements.map { (chave, valor) ->
                 "${extractValueToString(chave)}: ${extractValueToString(valor)}"
             }
-            "[[${entradas.joinToString(", ")}]]"
+            "[[${entries.joinToString(", ")}]]"
         }
 
         else -> value.toString()
     }
 }
 
-fun isDot(ctx: ChamadaContext, i: Int) = i < ctx.childCount && ctx.getChild(i).text == "."
+fun isDot(ctx: PlarParser.ChamadaContext, i: Int) = i < ctx.childCount && ctx.getChild(i).text == "."

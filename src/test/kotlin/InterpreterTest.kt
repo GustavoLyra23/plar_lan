@@ -1,8 +1,8 @@
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
+import org.gustavolyra.PlarLexer
+import org.gustavolyra.PlarParser
 import org.gustavolyra.portugolpp.Interpreter
-import org.gustavolyra.portugolpp.PortugolPPLexer
-import org.gustavolyra.portugolpp.PortugolPPParser
 import java.io.ByteArrayOutputStream
 import java.io.PrintStream
 import kotlin.test.AfterTest
@@ -34,8 +34,8 @@ class InterpreterTest {
             escrever("teste");
         """.trimIndent()
 
-        val lexer = PortugolPPLexer(CharStreams.fromString(code))
-        val parser = PortugolPPParser(CommonTokenStream(lexer))
+        val lexer = PlarLexer(CharStreams.fromString(code))
+        val parser = PlarParser(CommonTokenStream(lexer))
         val tree = parser.programa()
 
         val result = interpreter.visit(tree)

@@ -21,7 +21,7 @@ dependencies {
 
 generateGrammarSource {
     maxHeapSize = "64m"
-    arguments += ['-visitor', '-package', 'org.gustavolyra.portugolpp']
+    arguments += ['-visitor', '-package', 'org.gustavolyra']
     outputDirectory = file("${layout.buildDirectory.get()}/generated-src/antlr/main")
 }
 
@@ -54,7 +54,7 @@ kotlin {
 }
 
 shadowJar {
-    archiveBaseName.set('portugolpp')
+    archiveBaseName.set('plar')
     archiveClassifier.set('')
     archiveVersion.set('')
     manifest {
@@ -66,7 +66,7 @@ launch4j {
     jarTask = tasks.shadowJar
     copyConfigurable = []
     mainClassName = 'MainKt'
-    outfile = 'portugolpp.exe'
+    outfile = 'plar.exe'
     headerType = 'console'
     jreMinVersion = '21'
 }

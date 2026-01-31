@@ -8,13 +8,17 @@ import models.enums.LOOP
 import models.errors.*
 import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
-import org.gustavolyra.portugolpp.PortugolPPParser.*
+import org.gustavolyra.PlarBaseVisitor
+import org.gustavolyra.PlarLexer
+import org.gustavolyra.PlarParser
+import org.gustavolyra.PlarParser.ImportarDeclaracaoContext
+import org.gustavolyra.PlarParser.ProgramaContext
 import processors.*
 import java.nio.file.Files
 
 
 @Suppress("REDUNDANT_OVERRIDE")
-class Interpreter : PortugolPPBaseVisitor<Value>() {
+class Interpreter : PlarBaseVisitor<Value>() {
     private var global = Environment()
 
     // actual exec environment
@@ -51,9 +55,9 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         try {
             val path = solvePath(filName)
             val fileContent = Files.readString(path)
-            val lexer = PortugolPPLexer(CharStreams.fromString(fileContent))
+            val lexer = PlarLexer(CharStreams.fromString(fileContent))
             val tokens = CommonTokenStream(lexer)
-            val parser = PortugolPPParser(tokens)
+            val parser = PlarParser(tokens)
             val tree = parser.programa()
 
             tree.importarDeclaracao().forEach { import ->
@@ -80,13 +84,13 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    override fun visitDeclaracaoInterface(ctx: DeclaracaoInterfaceContext): Value {
+    override fun visitDeclaracaoInterface(ctx: PlarParser.DeclaracaoInterfaceContext): Value {
         val interfaceName = ctx.ID().text
         global.setInterface(interfaceName, ctx)
         return Value.Null
     }
 
-    override fun visitDeclaracaoTentarCapturar(ctx: DeclaracaoTentarCapturarContext?): Value {
+    override fun visitDeclaracaoTentarCapturar(ctx: PlarParser.DeclaracaoTentarCapturarContext?): Value {
         try {
             visit(ctx?.bloco(0))
         } catch (_: Exception) {
@@ -95,7 +99,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return Value.Null
     }
 
-    override fun visitDeclaracaoClasse(ctx: DeclaracaoClasseContext): Value {
+    override fun visitDeclaracaoClasse(ctx: PlarParser.DeclaracaoClasseContext): Value {
         val className = ctx.ID(0).text
 
         getSuperClass(ctx)?.let { sc ->
@@ -109,7 +113,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return Value.Null
     }
 
-    override fun visitDeclaracaoVar(ctx: DeclaracaoVarContext): Value {
+    override fun visitDeclaracaoVar(ctx: PlarParser.DeclaracaoVarContext): Value {
         val name = ctx.ID().text
         val type = ctx.tipo()?.text
         val value = when {
@@ -131,7 +135,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return Value.Null
     }
 
-    override fun visitDeclaracaoFuncao(ctx: DeclaracaoFuncaoContext): Value {
+    override fun visitDeclaracaoFuncao(ctx: PlarParser.DeclaracaoFuncaoContext): Value {
         val name = ctx.ID().text
         val returnType = ctx.tipo()?.text
         if (isReturnInvalid(returnType, global)) throw SemanticError("Tipo de retorno inválido: $returnType")
@@ -147,7 +151,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
     private fun definirImplementacao(
-        ctx: DeclaracaoFuncaoContext, name: String, closure: Environment
+        ctx: PlarParser.DeclaracaoFuncaoContext, name: String, closure: Environment
     ): (List<Value>) -> Value {
         return { args ->
             val declaredParameters = ctx.listaParams()?.param()?.size ?: 0
@@ -176,7 +180,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
     //TODO: refactor visit return declaration
-    override fun visitDeclaracaoRetornar(ctx: DeclaracaoRetornarContext): Value {
+    override fun visitDeclaracaoRetornar(ctx: PlarParser.DeclaracaoRetornarContext): Value {
         val returnVal = ctx.expressao()?.let { visit(it) } ?: Value.Null
         // apenas valida se estivermos dentro de uma funcao
         if (actualFunction != null && actualFunction!!.returnType != null) {
@@ -195,13 +199,13 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         throw RetornoException(returnVal)
     }
 
-    override fun visitDeclaracaoSe(ctx: DeclaracaoSeContext): Value {
+    override fun visitDeclaracaoSe(ctx: PlarParser.DeclaracaoSeContext): Value {
         val condition = visit(ctx.expressao())
         if (condition !is Value.Logic) throw SemanticError("Condicaoo do 'if' deve ser logica")
         return if (condition.value) visit(ctx.declaracao(0)) else ctx.declaracao(1)?.let { visit(it) } ?: Value.Null
     }
 
-    override fun visitBloco(ctx: BlocoContext): Value {
+    override fun visitBloco(ctx: PlarParser.BlocoContext): Value {
         val previous = environment
         environment = Environment(previous)
         environment.thisObject = previous.thisObject
@@ -213,9 +217,9 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return Value.Null
     }
 
-    override fun visitExpressao(ctx: ExpressaoContext): Value = visit(ctx.getChild(0))
+    override fun visitExpressao(ctx: PlarParser.ExpressaoContext): Value = visit(ctx.getChild(0))
 
-    override fun visitAtribuicao(ctx: AtribuicaoContext): Value {
+    override fun visitAtribuicao(ctx: PlarParser.AtribuicaoContext): Value {
         ctx.logicaOu()?.let { return visit(it) }
         val rhs = when {
             ctx.expressao() != null -> visit(ctx.expressao())
@@ -264,7 +268,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    override fun visitAcesso(ctx: AcessoContext): Value {
+    override fun visitAcesso(ctx: PlarParser.AcessoContext): Value {
         val obj = visit(ctx.primario())
 
         if (obj !is Value.Object) {
@@ -277,7 +281,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return value
     }
 
-    override fun visitLogicaOu(ctx: LogicaOuContext): Value {
+    override fun visitLogicaOu(ctx: PlarParser.LogicaOuContext): Value {
         var left = visit(ctx.logicaE(0))
         for (i in 1 until ctx.logicaE().size) {
             if (left is Value.Logic && left.value) return Value.Logic(true)
@@ -288,7 +292,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return left
     }
 
-    override fun visitLogicaE(ctx: LogicaEContext): Value {
+    override fun visitLogicaE(ctx: PlarParser.LogicaEContext): Value {
         var left = visit(ctx.igualdade(0))
         for (i in 1 until ctx.igualdade().size) {
             if (left is Value.Logic && !left.value) return Value.Logic(false)
@@ -299,7 +303,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return left
     }
 
-    override fun visitIgualdade(ctx: IgualdadeContext): Value {
+    override fun visitIgualdade(ctx: PlarParser.IgualdadeContext): Value {
         var left = visit(ctx.comparacao(0))
 
         for (i in 1 until ctx.comparacao().size) {
@@ -326,7 +330,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return left
     }
 
-    override fun visitComparacao(ctx: ComparacaoContext): Value {
+    override fun visitComparacao(ctx: PlarParser.ComparacaoContext): Value {
         var left = visit(ctx.adicao(0))
         for (i in 1 until ctx.adicao().size) {
             val operator = ctx.getChild(i * 2 - 1).text
@@ -343,7 +347,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
 
-    override fun visitAdicao(ctx: AdicaoContext): Value {
+    override fun visitAdicao(ctx: PlarParser.AdicaoContext): Value {
         var left = visit(ctx.multiplicacao(0))
         for (i in 1 until ctx.multiplicacao().size) {
             val operator = ctx.getChild(i * 2 - 1).text
@@ -353,7 +357,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return left
     }
 
-    override fun visitMultiplicacao(ctx: MultiplicacaoContext): Value {
+    override fun visitMultiplicacao(ctx: PlarParser.MultiplicacaoContext): Value {
         var left = visit(ctx.unario(0))
         for (i in 1 until ctx.unario().size) {
             val operator = ctx.getChild(i * 2 - 1).text
@@ -363,7 +367,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return left
     }
 
-    override fun visitUnario(ctx: UnarioContext): Value {
+    override fun visitUnario(ctx: PlarParser.UnarioContext): Value {
         if (ctx.childCount == 2) {
             val operator = ctx.getChild(0).text
             val operand = visit(ctx.unario())
@@ -380,7 +384,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
         return visit(ctx.getChild(0))
     }
-
+    
     private fun findPropertyInHierarch(`object`: Value.Object, fieldName: String): Value? {
         val fieldValue = `object`.fields[fieldName]
         if (fieldValue != null) {
@@ -419,7 +423,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return `object`
     }
 
-    private fun findMethodInHierarchy(`object`: Value.Object, methodName: String): DeclaracaoFuncaoContext? {
+    private fun findMethodInHierarchy(`object`: Value.Object, methodName: String): PlarParser.DeclaracaoFuncaoContext? {
         val `class` = global.getClass(`object`.klass) ?: return null
         val method = `class`.declaracaoFuncao().find { it.ID().text == methodName }
         if (method != null) return method
@@ -439,12 +443,12 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
 
-    private fun isCall(ctx: ChamadaContext, i: Int, n: Int) = (i + 2) < n && ctx.getChild(i + 2).text == "("
+    private fun isCall(ctx: PlarParser.ChamadaContext, i: Int, n: Int) = (i + 2) < n && ctx.getChild(i + 2).text == "("
 
-    private fun extractArgumentsAndIndex(ctx: ChamadaContext, i: Int, n: Int): Pair<List<Value>, Int> {
-        val temArgsCtx = (i + 3) < n && ctx.getChild(i + 3) is ArgumentosContext
+    private fun extractArgumentsAndIndex(ctx: PlarParser.ChamadaContext, i: Int, n: Int): Pair<List<Value>, Int> {
+        val temArgsCtx = (i + 3) < n && ctx.getChild(i + 3) is PlarParser.ArgumentosContext
         val arguments = if (temArgsCtx) {
-            val argsCtx = ctx.getChild(i + 3) as ArgumentosContext
+            val argsCtx = ctx.getChild(i + 3) as PlarParser.ArgumentosContext
             argsCtx.expressao().map { visit(it) }
         } else emptyList()
         val step = if (temArgsCtx) 5 else 4
@@ -459,7 +463,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
 
     private fun readProperty(obj: Value.Object, name: String): Value? = findPropertyInHierarch(obj, name)
 
-    override fun visitChamada(ctx: ChamadaContext): Value {
+    override fun visitChamada(ctx: PlarParser.ChamadaContext): Value {
         ctx.acessoArray()?.let { return visit(it) }
 
         var r = visit(ctx.primario())
@@ -485,13 +489,12 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return r
     }
 
-    override fun visitDeclaracaoEnquanto(ctx: DeclaracaoEnquantoContext): Value {
+    override fun visitDeclaracaoEnquanto(ctx: PlarParser.DeclaracaoEnquantoContext): Value {
         var iterationsNum = 0
         while (iterationsNum < LOOP.MAX_LOOP.valor) {
             val condicao = visit(ctx.expressao())
             println("Condicao do loop: $condicao")
-            if (condicao !is Value.Logic)
-                throw SemanticError("Condicao do 'enquanto' deve ser um valor logico")
+            if (condicao !is Value.Logic) throw SemanticError("Condicao do 'enquanto' deve ser um valor logico")
             if (!condicao.value) {
                 println("Condicao falsa, saindo do loop")
                 break
@@ -518,7 +521,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return Value.Null
     }
 
-    override fun visitDeclaracaoPara(ctx: DeclaracaoParaContext): Value {
+    override fun visitDeclaracaoPara(ctx: PlarParser.DeclaracaoParaContext): Value {
         ctx.declaracaoVar()?.let { visit(it) } ?: ctx.expressao(0)?.let { visit(it) }
         loop@ while (true) {
             val cond = visit(ctx.expressao(0)) as? Value.Logic
@@ -547,7 +550,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return Value.Null
     }
 
-    override fun visitDeclaracaoFacaEnquanto(ctx: DeclaracaoFacaEnquantoContext): Value {
+    override fun visitDeclaracaoFacaEnquanto(ctx: PlarParser.DeclaracaoFacaEnquantoContext): Value {
         var iter = 0
         do {
             try {
@@ -570,12 +573,12 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return Value.Null
     }
 
-    override fun visitDeclaracaoQuebra(ctx: DeclaracaoQuebraContext): Value {
+    override fun visitDeclaracaoQuebra(ctx: PlarParser.DeclaracaoQuebraContext): Value {
         throw BreakException()
     }
 
     //TODO: ajustar declaracao de listas....
-    override fun visitListaLiteral(ctx: ListaLiteralContext): Value {
+    override fun visitListaLiteral(ctx: PlarParser.ListaLiteralContext): Value {
         val index = ctx.NUMERO().text.toInt()
         val list = mutableListOf<Value>()
         while (list.size < index) list.add(Value.Null)
@@ -583,18 +586,18 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
 
-    override fun visitMapaLiteral(ctx: MapaLiteralContext): Value {
+    override fun visitMapaLiteral(ctx: PlarParser.MapaLiteralContext): Value {
         return Value.Map()
     }
 
-    private fun validarAcessoArray(ctx: AcessoArrayContext, container: Value.List): Value {
+    private fun validarAcessoArray(ctx: PlarParser.AcessoArrayContext, container: Value.List): Value {
         val index = visit(ctx.expressao(0))
         if (index !is Value.Integer) throw SemanticError("Indice de lista deve ser um numero inteiro")
         if (index.value < 0 || index.value >= container.size) throw SemanticError("Indice fora dos limites da lista: ${index.value}")
         return container.elements[index.value]
     }
 
-    private fun validarAcessoMapa(ctx: AcessoArrayContext, container: Value.Map): Value {
+    private fun validarAcessoMapa(ctx: PlarParser.AcessoArrayContext, container: Value.Map): Value {
         val key = visit(ctx.expressao(0))
 
         // Para acesso bidimensional em mapas
@@ -636,7 +639,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         return container.elements[key] ?: Value.Null
     }
 
-    override fun visitAcessoArray(ctx: AcessoArrayContext): Value {
+    override fun visitAcessoArray(ctx: PlarParser.AcessoArrayContext): Value {
         return when (val container = visit(ctx.primario())) {
             is Value.List -> validarAcessoArray(ctx, container)
             is Value.Map -> validarAcessoMapa(ctx, container)
@@ -644,19 +647,18 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    override fun visitDeclaracaoContinue(ctx: DeclaracaoContinueContext): Value {
+    override fun visitDeclaracaoContinue(ctx: PlarParser.DeclaracaoContinueContext): Value {
         throw ContinueException()
     }
 
-    override fun visitChamadaFuncao(ctx: ChamadaFuncaoContext): Value {
+    override fun visitChamadaFuncao(ctx: PlarParser.ChamadaFuncaoContext): Value {
         //TODO: implement validation for all parameters
         val args = ctx.argumentos()?.expressao()?.map { visit(it) } ?: emptyList()
         val funcName = ctx.ID().text
         return if (ctx.primario() != null) {
             val obj = visit(ctx.primario())
             if (obj !is Value.Object) throw SemanticError("Chamada de metodo em nao objeto")
-            val classe =
-                global.getClass(obj.klass) ?: throw SemanticError("Classe nao encontrada: ${obj.klass}")
+            val classe = global.getClass(obj.klass) ?: throw SemanticError("Classe nao encontrada: ${obj.klass}")
             val method = classe.declaracaoFuncao().find { it.ID().text == funcName }
                 ?: throw SemanticError("Metodo nao encontrado: $funcName")
             executeMethod(obj, method, args)
@@ -665,9 +667,8 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    private fun solveFunction(name: String): Value.Fun =
-        runCatching { environment.get(name) as? Value.Fun }.getOrNull()
-            ?: throw SemanticError("Funcao nao encontrada ou nao seria funcao: $name")
+    private fun solveFunction(name: String): Value.Fun = runCatching { environment.get(name) as? Value.Fun }.getOrNull()
+        ?: throw SemanticError("Funcao nao encontrada ou nao seria funcao: $name")
 
     private fun functionCall(nome: String, args: List<Value>): Value {
         environment.thisObject?.let { obj ->
@@ -678,15 +679,12 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
             }
         }
         val function = solveFunction(nome)
-        return function.implementation?.invoke(args)
-            ?: throw SemanticError("Funcao '$nome' nao possui implementacao.")
+        return function.implementation?.invoke(args) ?: throw SemanticError("Funcao '$nome' nao possui implementacao.")
     }
 
 
     private fun executeMethod(
-        `object`: Value.Object,
-        method: DeclaracaoFuncaoContext,
-        arguments: List<Value>
+        `object`: Value.Object, method: PlarParser.DeclaracaoFuncaoContext, arguments: List<Value>
     ): Value {
         val envMethod = Environment(global)
         envMethod.thisObject = `object`
@@ -723,11 +721,11 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    private fun solveId(ctx: PrimarioContext): Value {
+    private fun solveId(ctx: PlarParser.PrimarioContext): Value {
         val name = ctx.ID().text
         if (ctx.childCount > 1 && ctx.getChild(1).text == "(") {
-            val arguments = if (ctx.childCount > 2 && ctx.getChild(2) is ArgumentosContext) {
-                val argsCtx = ctx.getChild(2) as ArgumentosContext
+            val arguments = if (ctx.childCount > 2 && ctx.getChild(2) is PlarParser.ArgumentosContext) {
+                val argsCtx = ctx.getChild(2) as PlarParser.ArgumentosContext
                 argsCtx.expressao().map { visit(it) }
             } else {
                 emptyList()
@@ -742,7 +740,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    private fun solveClass(ctx: PrimarioContext): Value {
+    private fun solveClass(ctx: PlarParser.PrimarioContext): Value {
         val match = Regex("novo([A-Za-z0-9_]+)\\(.*\\)").find(ctx.text)
         if (match != null) {
             val className = match.groupValues[1]
@@ -755,7 +753,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
 
-    override fun visitPrimario(ctx: PrimarioContext): Value {
+    override fun visitPrimario(ctx: PlarParser.PrimarioContext): Value {
         return when {
             ctx.text == "nulo" -> Value.Null
             ctx.listaLiteral() != null -> visit(ctx.listaLiteral())
@@ -780,7 +778,7 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
     }
 
     //TODO: do more tests on this function....
-    private fun extractConstructorArgs(ctx: PrimarioContext): List<Value> {
+    private fun extractConstructorArgs(ctx: PlarParser.PrimarioContext): List<Value> {
         val args = mutableListOf<Value>()
         if (!ctx.argumentos().isEmpty) {
             ctx.argumentos().expressao().forEach { expr ->
@@ -811,7 +809,9 @@ class Interpreter : PortugolPPBaseVisitor<Value>() {
         }
     }
 
-    private fun createClassObject(nomeClasse: String, ctx: PrimarioContext, classe: DeclaracaoClasseContext): Value {
+    private fun createClassObject(
+        nomeClasse: String, ctx: PlarParser.PrimarioContext, classe: PlarParser.DeclaracaoClasseContext
+    ): Value {
         val superClass = global.getSuperClasse(classe)
         val interfaces = global.getInterfaces(classe)
 

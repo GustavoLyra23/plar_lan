@@ -3,8 +3,8 @@ package processors
 import models.Environment
 import models.Value
 import models.errors.SemanticError
-import org.gustavolyra.portugolpp.PortugolPPParser.DeclaracaoClasseContext
-import org.gustavolyra.portugolpp.PortugolPPParser.ProgramaContext
+import org.gustavolyra.PlarParser.DeclaracaoClasseContext
+import org.gustavolyra.PlarParser.ProgramaContext
 
 fun getSuperClass(ctx: DeclaracaoClasseContext): String? =
     if (ctx.childCount > 3 && ctx.getChild(2).text == "estende") ctx.getChild(3).text else null
@@ -20,20 +20,20 @@ fun getIndexFromWord(ctx: DeclaracaoClasseContext, word: String): Int {
     return -1
 }
 
-fun readIdentitiesToKey(ctx: DeclaracaoClasseContext, inicio: Int): List<String> {
-    val lista = mutableListOf<String>()
-    var i = inicio
+fun readIdentitiesToKey(ctx: DeclaracaoClasseContext, start: Int): List<String> {
+    val list = mutableListOf<String>()
+    var i = start
     while (i < ctx.childCount && ctx.getChild(i).text != "{") {
         val t = ctx.getChild(i).text
-        if (t != "," && t != "implementa") lista.add(t)
+        if (t != "," && t != "implementa") list.add(t)
         i++
     }
-    return lista
+    return list
 }
 
 fun validateInterface(
     classeCtx: DeclaracaoClasseContext,
-    nomeClasse: String,
+    className: String,
     interfaces: List<String>,
     global: Environment
 ) {
@@ -41,17 +41,17 @@ fun validateInterface(
         global.getInterface(nome)
             ?: throw SemanticError("Interface '$nome' não encontrada")
         if (!validateInterfaceImplementation(classeCtx, nome, global)) {
-            throw SemanticError("A classe '$nomeClasse' não implementa todos os métodos da interface '$nome'")
+            throw SemanticError("A classe '$className' não implementa todos os métodos da interface '$nome'")
         }
     }
 }
 
 fun validateInterfaceImplementation(
     classeContext: DeclaracaoClasseContext,
-    nomeInterface: String,
+    interfaceName: String,
     global: Environment
 ): Boolean {
-    val iface = global.getInterface(nomeInterface) ?: return false
+    val iface = global.getInterface(interfaceName) ?: return false
 
     val fornecidos = buildSet<String> {
         addAll(classeContext.declaracaoFuncao().map { it.ID().text })

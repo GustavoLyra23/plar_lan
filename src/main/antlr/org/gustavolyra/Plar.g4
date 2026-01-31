@@ -1,4 +1,4 @@
-grammar PortugolPP;
+grammar Plar;
 
 programa
     : importarDeclaracao* declaracao* EOF

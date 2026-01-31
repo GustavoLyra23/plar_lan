@@ -1,9 +1,9 @@
 import helpers.solvePath
 import helpers.validateFile
 import org.antlr.v4.runtime.*
+import org.gustavolyra.PlarLexer
+import org.gustavolyra.PlarParser
 import org.gustavolyra.portugolpp.Interpreter
-import org.gustavolyra.portugolpp.PortugolPPLexer
-import org.gustavolyra.portugolpp.PortugolPPParser
 import java.nio.file.Path
 import kotlin.io.path.readText
 import kotlin.system.exitProcess
@@ -54,9 +54,9 @@ fun execFile(file: Path) {
 fun execEngine(code: String) {
     try {
         val input = CharStreams.fromString(code)
-        val lexer = PortugolPPLexer(input)
+        val lexer = PlarLexer(input)
         val tokens = CommonTokenStream(lexer)
-        val parser = PortugolPPParser(tokens)
+        val parser = PlarParser(tokens)
         parser.removeErrorListeners()
         parser.addErrorListener(object : BaseErrorListener() {
             override fun syntaxError(
