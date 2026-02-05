@@ -3,3 +3,9 @@ var f = funcao() {
 };
 
 f();
+
+var int = 3;
+var txt = "3";
+var nome = "gustavo";
+
+escrever(consultar_tipo(txt));

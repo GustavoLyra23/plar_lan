@@ -39,11 +39,11 @@ sealed class Value {
 
     data class Fun(
         val name: String,
-        //TODO: find a better use case for this...
+        //TODO: find a better use case for this field...
         val declaration: PlarParser.DeclaracaoFuncaoContext? = null,
-        val returnType: String? = null,
+        var returnType: String? = null,
         val closure: Environment,
-        val implementation: ((kotlin.collections.List<Value>) -> Value)? = null,
+        var implementation: ((kotlin.collections.List<Value>) -> Value)? = null,
     ) : Value()
 
     object Null : Value()
@@ -56,9 +56,8 @@ sealed class Value {
         is Object -> klass
         is Fun -> name
         is Interface -> name
-        is List -> "Lista"
         is Map -> "Mapa"
-        //TODO: rever else case
+        is List -> "Lista"
         else -> BasicTypes.Nulo.tipo
     }
 

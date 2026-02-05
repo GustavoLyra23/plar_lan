@@ -67,6 +67,8 @@ class Interpreter : PlarBaseVisitor<Value>() {
         }
     }
 
+    //TODO check if it is necessary to visit imports first
+    // or visit as it goes
     fun interpret(tree: PlarParser.ProgramaContext) {
         try {
             tree.importarDeclaracao()?.forEach { import ->

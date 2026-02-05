@@ -9,7 +9,8 @@ import kotlin.io.path.readText
 import kotlin.system.exitProcess
 
 var interpreter = Interpreter()
-val STATIC_PATH: Path = Path.of(System.getProperty("user.dir"))
+val STATIC_PATH: Path =
+    Path.of(System.getProperty("user.dir")) //cwd
 
 fun main() {
     println("Iniciando Interpretador Plar")

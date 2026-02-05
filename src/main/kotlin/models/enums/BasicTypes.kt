@@ -1,6 +1,5 @@
 package models.enums
 
-//TODO: find a better use for this enum
 enum class BasicTypes(val tipo: String) {
     INTEIRO("Inteiro"),
     REAL("Real"),
