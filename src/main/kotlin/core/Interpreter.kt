@@ -349,8 +349,7 @@ class Interpreter : MagBaseVisitor<Value>() {
         }
         return left
     }
-
-
+    
     override fun visitAdicao(ctx: MagParser.AdicaoContext): Value {
         var left = visit(ctx.multiplicacao(0))
         for (i in 1 until ctx.multiplicacao().size) {
@@ -753,7 +752,7 @@ class Interpreter : MagBaseVisitor<Value>() {
             throw SemanticError("Sintaxe invalida para criacao de objeto")
         }
     }
-    
+
     override fun visitPrimario(ctx: MagParser.PrimarioContext): Value {
         return when {
             ctx.text == "nulo" -> Value.Null

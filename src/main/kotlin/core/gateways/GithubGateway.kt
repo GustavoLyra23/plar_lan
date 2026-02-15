@@ -1,17 +1,14 @@
 package core.gateways
 
 import core.io.runCLICommand
+import kotlinx.coroutines.delay
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
-import java.net.http.HttpClient
 import java.nio.file.Path
 import kotlin.io.path.exists
 
 class GithubGateway {
     private val log: Logger = LoggerFactory.getLogger("GithubGateway")
-    private val httpClient: HttpClient = HttpClient.newBuilder()
-        .followRedirects(HttpClient.Redirect.NORMAL)
-        .build()
 
     private constructor()
 
@@ -22,7 +19,9 @@ class GithubGateway {
         }
     }
 
-    fun getLibrary(libUrl: String, destDir: Path) {
+    suspend fun getLibrary(libUrl: String, destDir: Path) {
+        log.info("Buscando biblioteca: $libUrl")
+        delay(5000) // only for visual test... remove this later...
         val finalFolderName = libUrl.substringAfterLast("/").removeSuffix(".git")
         val targetDir = destDir.resolve(finalFolderName)
         if (targetDir.exists()) {

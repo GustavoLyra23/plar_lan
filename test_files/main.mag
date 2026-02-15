@@ -1,4 +1,4 @@
-var f = funcao() {
+/*var f = funcao() {
     escrever("gustavo");
 };
 
@@ -8,4 +8,40 @@ var int = 3;
 var txt = "3";
 var nome = "gustavo";
 escrever(consultar_tipo(txt));
+
+suspender funcao teste() {
+   escrever("oi");
+}
+
+esperar teste();
+*/
+
+interface Pessoa {
+    funcao falar();
+}
+
+interface Funcionario {
+    funcao trabalhar();
+}
+
+classe Worker implementa Funcionario, Pessoa {
+    funcao trabalhar() {
+      escrever("Amo trabalhar...");
+    }
+
+    funcao falar() {
+      escrever("Oi");
+    }
+}
+
+funcao t(a: Inteiro, b: Inteiro) {
+  dormir(500);
+  var w = novo Worker();
+  w.trabalhar();
+  retornar a + b;
+}
+
+var resposta = executar(t, 4, 3);
+escrever(resposta);
+
 

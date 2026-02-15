@@ -5,7 +5,6 @@ import core.processors.FileIOProcessor.writeFile
 import extractValueToPrint
 import helpers.getHostAndPortFromArgs
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import models.Environment
 import models.Value
@@ -19,6 +18,7 @@ import java.net.InetSocketAddress
 import java.net.ServerSocket
 import java.nio.file.Path
 import java.util.*
+import kotlin.concurrent.thread
 
 fun defineDefaultFunctions(env: Environment) {
     registerIOFunctions(env)
@@ -118,17 +118,17 @@ fun registerThreadFunctions(env: Environment) {
         val execFun = args[0] as Value.Fun
         val realArgs = args.drop(1)
         //run sincrono...
-        runBlocking {
-            launch {
-                try {
-                    execFun.implementation!!.invoke(realArgs)
-                } catch (e: Exception) {
-                    println("Erro na execucao da thread: ${e.message}")
-                }
-            }.join()
-        }
-        Value.Null
+        var res: Value = Value.Null;
+        thread {
+            try {
+                res = execFun.implementation!!.invoke(realArgs)
+            } catch (e: Exception) {
+                println("Erro na execucao da thread: ${e.message}")
+            }
+        }.join()
+        res
     })
+
     env.define("dormir", Value.Fun("dormir", null, null, env) { args ->
         if (args.isEmpty()) throw RuntimeException("Funcao dormir  requer um argumento (milissegundos)")
         val time = args[0]

@@ -4,6 +4,7 @@ import core.io.AnimateCLI
 import helpers.solvePath
 import helpers.validateFile
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.antlr.v4.runtime.*
@@ -24,7 +25,7 @@ fun main() = runBlocking() {
     interactiveMode(this);
 }
 
-fun interactiveMode(scope: CoroutineScope) {
+suspend fun interactiveMode(scope: CoroutineScope) {
     mainLog.info("Digite 'sair' para interromper o programa")
     mainLog.info("Digite 'run <caminho>' para executar um arquivo")
     while (true) {
@@ -37,10 +38,12 @@ fun interactiveMode(scope: CoroutineScope) {
                 val animJob = scope.launch {
                     AnimateCLI.runLoadAnimation()
                 }
-                GithubGateway.instance.getLibrary(
-                    inputArray[1], // TODO: find a better way to get and validate this input
-                    Path.of("bibliotecas")
-                )
+                scope.launch(Dispatchers.IO) {
+                    GithubGateway.instance.getLibrary(
+                        inputArray[1],
+                        Path.of("bibliotecas")
+                    )
+                }.join()
                 animJob.cancel()
                 println()
             }
